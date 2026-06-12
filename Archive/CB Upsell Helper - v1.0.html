@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carbon Black Upsell Helper</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --nav:        #1d2535;
+    --nav-text:   #c8cdd8;
+    --accent:     #2b7de9;
+    --accent-bg:  #e8f1fd;
+    --bg:         #f4f5f7;
+    --card:       #ffffff;
+    --border:     #dde1e9;
+    --text:       #1a202c;
+    --muted:      #6b7280;
+    --green:      #2e7d32;
+    --green-bg:   #edf7ee;
+    --red:        #b91c1c;
+    --red-bg:     #fef2f2;
+    --warn-bg:    #fffbeb;
+    --warn-border:#d97706;
+  }
+
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+  /* ── Header ── */
+  .app-header {
+    background: var(--nav);
+    color: #fff;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 12px;
+    border-bottom: 1px solid #111827;
+  }
+  .app-header .logo { font-size: 15px; font-weight: 600; color: #fff; letter-spacing: 0.01em; }
+  .app-header .divider { width: 1px; height: 20px; background: #374151; }
+  .app-header .subtitle { font-size: 13px; color: var(--nav-text); }
+  .app-header .reset-btn {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid #4b5563;
+    color: #e5e7eb;
+    padding: 5px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: border-color .15s, color .15s;
+  }
+  .app-header .reset-btn:hover { border-color: #9ca3af; color: #fff; }
+
+  /* ── Layout ── */
+  .container { max-width: 920px; margin: 28px auto; padding: 0 16px; display: flex; flex-direction: column; gap: 20px; }
+
+  /* ── Card ── */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .card-header {
+    background: var(--nav);
+    color: #fff;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    letter-spacing: 0.02em;
+  }
+  .step-badge {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .card-body { padding: 18px 20px; }
+
+  /* ── Posture buttons ── */
+  .posture-row { display: flex; gap: 12px; }
+  .posture-btn {
+    flex: 1; padding: 13px 16px;
+    border: 2px solid var(--border); border-radius: 5px;
+    background: var(--card); cursor: pointer;
+    font-size: 13px; font-weight: 600;
+    text-align: center; transition: all .15s;
+    color: var(--text);
+  }
+  .posture-btn:hover { border-color: var(--accent); }
+  .posture-btn.active-friendly { border-color: var(--green); background: var(--green-bg); color: var(--green); }
+  .posture-btn.active-adverse  { border-color: var(--red);   background: var(--red-bg);   color: var(--red); }
+
+  /* ── Section label ── */
+  .section-label {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--muted);
+    margin-bottom: 10px; margin-top: 18px;
+    border-bottom: 1px solid var(--border); padding-bottom: 6px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* ── Product grid ── */
+  .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+  .product-item {
+    border: 1.5px solid var(--border); border-radius: 5px;
+    padding: 11px 13px; cursor: pointer;
+    transition: border-color .12s, background .12s;
+    display: flex; align-items: flex-start; gap: 10px;
+    user-select: none;
+  }
+  .product-item:hover { border-color: var(--accent); background: var(--accent-bg); }
+  .product-item.selected { border-color: var(--accent); background: var(--accent-bg); }
+  .product-item.disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+
+  .chk {
+    width: 15px; height: 15px; border: 2px solid #9ca3af;
+    border-radius: 3px; flex-shrink: 0; margin-top: 2px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .12s;
+  }
+  .product-item.selected .chk { background: var(--accent); border-color: var(--accent); }
+  .chk-tick { display: none; color: #fff; font-size: 10px; font-weight: 700; }
+  .product-item.selected .chk-tick { display: block; }
+
+  .p-name { font-weight: 600; font-size: 13px; line-height: 1.3; color: var(--text); }
+  .p-desc { font-size: 11.5px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+
+  /* ── Warning banner ── */
+  .warn-banner {
+    display: none; background: var(--warn-bg);
+    border: 1px solid var(--warn-border); border-radius: 4px;
+    padding: 9px 13px; font-size: 12.5px; color: #92400e;
+    margin-bottom: 14px; line-height: 1.4;
+  }
+  .warn-banner.visible { display: block; }
+
+  /* ── Questions ── */
+  .question-item {
+    border: 1px solid var(--border); border-radius: 5px;
+    padding: 13px 15px; background: #fafbfd;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .q-text { font-size: 13px; line-height: 1.55; color: var(--text); }
+  .q-btns { display: flex; gap: 8px; }
+  .q-btn {
+    padding: 5px 18px; border: 1.5px solid var(--border);
+    border-radius: 4px; cursor: pointer; font-size: 12.5px;
+    font-weight: 600; background: var(--card); color: var(--muted);
+    transition: all .12s;
+  }
+  .q-btn:hover { border-color: #9ca3af; color: var(--text); }
+  .q-btn.yes.active { border-color: var(--green); background: var(--green-bg); color: var(--green); }
+  .q-btn.no.active  { border-color: #9ca3af;      background: #f3f4f6;         color: #374151; }
+
+  .question-stack { display: flex; flex-direction: column; gap: 10px; }
+
+  /* ── Results ── */
+  .result-item {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-bg);
+    border-radius: 0 5px 5px 0;
+    padding: 12px 15px;
+  }
+  .r-product { font-weight: 700; font-size: 13px; color: var(--accent); margin-bottom: 4px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .r-sku     { font-size: 11px; font-weight: 700; font-family: 'Courier New', monospace; background: var(--nav); color: #e2e8f0; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.04em; }
+  .r-reason  { font-size: 12.5px; color: #374151; line-height: 1.55; }
+  .result-stack { display: flex; flex-direction: column; gap: 10px; }
+
+  .empty-msg { font-size: 13px; color: var(--muted); font-style: italic; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <span class="logo">Carbon Black Cloud</span>
+  <div class="divider"></div>
+  <span class="subtitle">Upsell Helper</span>
+  <button class="reset-btn" onclick="resetAll()">Reset</button>
+</header>
+
+<div class="container">
+
+  <!-- Step 1 -->
+  <div class="card">
+    <div class="card-header"><div class="step-badge">1</div> Customer Cloud Posture</div>
+    <div class="card-body">
+      <div class="posture-row">
+        <button class="posture-btn" id="btn-friendly" onclick="setPosture('friendly')">☁️&nbsp; Cloud Friendly</button>
+        <button class="posture-btn" id="btn-adverse"  onclick="setPosture('adverse')">🔒&nbsp; Cloud Adverse</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="card" id="card-products" style="display:none">
+    <div class="card-header"><div class="step-badge">2</div> Customer's Current Products</div>
+    <div class="card-body">
+
+      <div class="warn-banner" id="warn-overlap"></div>
+
+      <!-- Endpoint Bundles -->
+      <div id="sec-ep-bundles">
+        <div class="section-label">Endpoint Bundles <span style="font-weight:400;text-transform:none;letter-spacing:0">(select one per family)</span></div>
+        <div class="product-grid">
+          <div class="product-item" id="item-ep-foundations" onclick="selectBundle('endpoint','ep-foundations')">
+            <div class="chk"><span class="chk-tick">✓</span></div>
+            <div><div class="p-name">Endpoint Foundations</div><div class="p-desc">NGAV, Basic Behavioral EDR</div></div>
+          </div>
+          <div class="product-item" id="item-ep-advanced" onclick="selectBundle('endpoint','ep-advanced')">
+            <div class="chk"><span class="chk-tick">✓</span></div>
+            <div><div class="p-name">Endpoint Advanced</div><div class="p-desc">Foundations + Live Query, Vulnerability Management</div></div>
+          </div>
+          <div class="product-item" id="item-ep-enterprise" onclick="selectBundle('endpoint','ep-enterprise')">
+            <div class="chk"><span class="chk-tick">✓</span></div>
+            <div><div class="p-name">Endpoint Enterprise</div><div class="p-desc">Advanced + Enterprise EDR</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Workloads Bundles -->
+      <div id="sec-wl-bundles">
+        <div class="section-label">Workloads Bundles <span style="font-weight:400;text-transform:none;letter-spacing:0">(select one per family)</span></div>
+        <div class="product-grid">
+          <div class="product-item" id="item-wl-foundations" onclick="selectBundle('workloads','wl-foundations')">
+            <div class="chk"><span class="chk-tick">✓</span></div>
+            <div><div class="p-name">Workloads Foundations</div><div class="p-desc">vCenter Plug-in, AWS onboarding, Lifecycle Mgmt, Asset Inventory, Vulnerability Mgmt, Live Query</div></div>
+          </div>
+          <div class="product-item" id="item-wl-advanced" onclick="selectBundle('workloads','wl-advanced')">
+            <div class="chk"><span class="chk-tick">✓</span></div>
+            <div><div class="p-name">Workloads Advanced</div><div class="p-desc">Foundations + NGAV</div></div>
+          </div>
+          <div class="product-item" id="item-wl-enterprise" onclick="selectBundle('workloads','wl-enterprise')">
+            <div class="chk"><span class="chk-tick">✓</span></div>
+            <div><div class="p-name">Workloads Enterprise</div><div class="p-desc">Advanced + Enterprise EDR</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Individual Cloud Products -->
+      <div id="sec-individual">
+        <div class="section-label">Individual Cloud Products <span style="font-weight:400;text-transform:none;letter-spacing:0">(standalone / add-ons)</span></div>
+        <div class="product-grid">
+          <div class="product-item" id="item-eedr" onclick="toggleIndiv('eedr')">
+            <div class="chk"><span class="chk-tick">✓</span></div>
+            <div><div class="p-name">Enterprise EDR</div><div class="p-desc">Advanced threat hunting, continuous event capture</div></div>
+          </div>
+          <div class="product-item" id="item-live-query" onclick="toggleIndiv('live-query')">
+            <div class="chk"><span class="chk-tick">✓</span></div>
+            <div><div class="p-name">Live Query</div><div class="p-desc">Real-time query across endpoints (Audit &amp; Remediation)</div></div>
+          </div>
+          <div class="product-item" id="item-hbfw" onclick="toggleIndiv('hbfw')">
+            <div class="chk"><span class="chk-tick">✓</span></div>
+            <div><div class="p-name">Host-Based Firewall</div><div class="p-desc">Centrally manage Windows host firewall</div></div>
+          </div>
+          <div class="product-item" id="item-endr" onclick="toggleIndiv('endr')">
+            <div class="chk"><span class="chk-tick">✓</span></div>
+            <div><div class="p-name">Endpoint NDR (eNDR/XDR)</div><div class="p-desc">Network telemetry add-on — requires Enterprise EDR</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- On-Premises -->
+      <div>
+        <div class="section-label">On-Premises Products</div>
+        <div class="product-grid">
+          <div class="product-item" id="item-cbr" onclick="toggleIndiv('cbr')">
+            <div class="chk"><span class="chk-tick">✓</span></div>
+            <div><div class="p-name">Carbon Black Response</div><div class="p-desc">On-premises EDR</div></div>
+          </div>
+          <div class="product-item" id="item-appcontrol" onclick="toggleIndiv('appcontrol')">
+            <div class="chk"><span class="chk-tick">✓</span></div>
+            <div><div class="p-name">App Control</div><div class="p-desc">Application control for fixed function devices, POS, legacy OSs</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="card" id="card-questions" style="display:none">
+    <div class="card-header"><div class="step-badge">3</div> Clarifying Questions</div>
+    <div class="card-body">
+      <div id="question-list"><p class="empty-msg">Select products above to see relevant questions.</p></div>
+    </div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="card" id="card-results" style="display:none">
+    <div class="card-header"><div class="step-badge">4</div> Upsell Opportunities</div>
+    <div class="card-body">
+      <div id="results-list"><p class="empty-msg">Answer the questions above to see recommendations.</p></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+const S = { posture: null, products: new Set(), answers: {} };
+
+// ── Product families ──────────────────────────────────────────────────────────
+const EP_BUNDLES  = ['ep-foundations','ep-advanced','ep-enterprise'];
+const WL_BUNDLES  = ['wl-foundations','wl-advanced','wl-enterprise'];
+const ALL_BUNDLES = [...EP_BUNDLES, ...WL_BUNDLES];
+
+// Which standalone individual products are covered by each bundle
+const BUNDLE_COVERS = {
+  'ep-advanced':    ['live-query'],
+  'ep-enterprise':  ['live-query','eedr'],
+  'wl-foundations': ['live-query'],
+  'wl-advanced':    ['live-query'],
+  'wl-enterprise':  ['live-query','eedr'],
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const has  = id => S.products.has(id);
+const hasEEDR = () => has('eedr') || has('ep-enterprise') || has('wl-enterprise');
+const hasAnyEPBundle  = () => EP_BUNDLES.some(b => has(b));
+const hasAnyWLBundle  = () => WL_BUNDLES.some(b => has(b));
+const hasAnyBundle    = () => ALL_BUNDLES.some(b => has(b));
+
+function setItemSelected(id, on) {
+  const el = document.getElementById('item-' + id);
+  if (el) el.classList.toggle('selected', on);
+}
+
+// ── Cloud posture ─────────────────────────────────────────────────────────────
+function setPosture(p) {
+  S.posture = p;
+  document.getElementById('btn-friendly').className = 'posture-btn' + (p==='friendly' ? ' active-friendly' : '');
+  document.getElementById('btn-adverse').className  = 'posture-btn' + (p==='adverse'  ? ' active-adverse'  : '');
+
+  // Cloud sections only visible when friendly
+  ['sec-ep-bundles','sec-wl-bundles','sec-individual'].forEach(id => {
+    document.getElementById(id).style.display = p==='friendly' ? '' : 'none';
+  });
+
+  // Clear cloud products if switching to adverse
+  if (p === 'adverse') {
+    [...ALL_BUNDLES,'eedr','live-query','hbfw','endr'].forEach(id => {
+      S.products.delete(id);
+      setItemSelected(id, false);
+    });
+  }
+
+  document.getElementById('card-products').style.display  = '';
+  document.getElementById('card-questions').style.display = '';
+  document.getElementById('card-results').style.display   = '';
+  render();
+}
+
+// ── Bundle selection (single-select within each family; Endpoint + Workloads can coexist) ──
+function selectBundle(family, id) {
+  const alreadySelected = has(id);
+  const group = family === 'endpoint' ? EP_BUNDLES : WL_BUNDLES;
+
+  // Deselect others within the same family only
+  group.forEach(b => { S.products.delete(b); setItemSelected(b, false); });
+
+  if (!alreadySelected) {
+    S.products.add(id);
+    setItemSelected(id, true);
+
+    // Remove any standalone products now covered by this bundle
+    const covered = BUNDLE_COVERS[id] || [];
+    covered.forEach(p => {
+      if (has(p)) {
+        S.products.delete(p);
+        setItemSelected(p, false);
+        flashWarn('One or more selected individual products are already included in the selected bundle and have been deselected.');
+      }
+    });
+  }
+
+  render();
+}
+
+// ── Individual product toggle ─────────────────────────────────────────────────
+function toggleIndiv(id) {
+  const coveredByBundle = ALL_BUNDLES.some(b => has(b) && (BUNDLE_COVERS[b]||[]).includes(id));
+  if (coveredByBundle) {
+    flashWarn('This product is already included in your selected bundle.');
+    return;
+  }
+  if (has(id)) { S.products.delete(id); setItemSelected(id, false); }
+  else          { S.products.add(id);   setItemSelected(id, true);  }
+  render();
+}
+
+let warnTimer = null;
+function flashWarn(msg) {
+  const el = document.getElementById('warn-overlap');
+  el.textContent = '⚠️ ' + msg;
+  el.classList.add('visible');
+  clearTimeout(warnTimer);
+  warnTimer = setTimeout(() => el.classList.remove('visible'), 4000);
+}
+
+// ── Questions ─────────────────────────────────────────────────────────────────
+const QUESTIONS = [
+  { id:'q1',  trigger:()=> S.posture==='friendly' && hasAnyBundle() && !has('appcontrol'),
+    text:'Does the customer need to protect fixed function devices, POS systems, or legacy operating systems?',
+    suggest:'App Control',
+    reason:'App Control is purpose-built for locked-down, unagentable, or legacy environments where standard EDR cannot be deployed.' },
+
+  { id:'q2',  trigger:()=> S.posture==='friendly' && hasEEDR() && !has('endr'),
+    text:'Does the customer want additional network telemetry — HTTP/TLS headers, JA3/JA3S fingerprints, Community IDs, protocol identification, and bytes sent/received?',
+    suggest:'Endpoint NDR (eNDR/XDR)',
+    reason:'eNDR extends Enterprise EDR with deep network visibility — session-level telemetry that endpoint-only sensors cannot capture.' },
+
+  { id:'q3',  trigger:()=> S.posture==='friendly' && has('ep-foundations') && !has('live-query') && !has('ep-advanced') && !has('ep-enterprise'),
+    text:'Is the customer concerned about compliance audits, M&A due diligence, or helpdesk / IT operations visibility?',
+    suggest:'Live Query (add-on) or upgrade to Endpoint Advanced',
+    reason:'Live Query enables real-time SQL-like queries across all endpoints — essential for compliance evidence, inventory sweeps during M&A, and rapid helpdesk investigation.' },
+
+  { id:'q4',  trigger:()=> S.posture==='friendly' && (hasAnyBundle() || has('appcontrol')) && !has('hbfw'),
+    text:'Does the customer want to centrally manage and control the Windows host-based firewall across their endpoints or Windows-based workloads?',
+    suggest:'Host-Based Firewall',
+    reason:'Host-Based Firewall lets security teams define and enforce Windows firewall rules fleet-wide from the Carbon Black Cloud console.' },
+
+  { id:'q5',  trigger:()=> S.posture==='friendly' && has('ep-foundations') && !has('ep-advanced') && !has('ep-enterprise'),
+    text:'Does the customer want visibility into vulnerabilities across their endpoints — CVEs, patch status, risk prioritization?',
+    suggest:'Endpoint Advanced or Endpoint Enterprise',
+    reason:'Vulnerability Management is included in Endpoint Advanced+ — upgrading the bundle is typically more cost-effective than adding a standalone VM tool.' },
+
+  { id:'q6',  trigger:()=> S.posture==='friendly' &&
+               (has('ep-foundations')||has('ep-advanced')) && !has('ep-enterprise') &&
+               // Q17 handles the combined case when both families need upgrading
+               !( (has('wl-foundations')||has('wl-advanced')) && !has('wl-enterprise') ),
+    text:'Does the customer want greater visibility into endpoint activity, better threat hunting capabilities, and the ability to write custom detections?',
+    suggest:'Endpoint Enterprise',
+    reason:'Endpoint Enterprise adds Enterprise EDR — continuous event capture, full process tree visibility, threat intelligence feeds, and custom detection rules not available in lower tiers.' },
+
+  { id:'q7',  trigger:()=> S.posture==='friendly' && has('wl-foundations') && !has('wl-advanced') && !has('wl-enterprise'),
+    text:'Does the customer want to detect and prevent malware from executing on their cloud workloads and VMs — not just visibility?',
+    suggest:'Workloads Advanced',
+    reason:'Workloads Foundations provides hygiene and visibility only — Workloads Advanced adds NGAV to actively block malware on cloud workloads.' },
+
+  { id:'q8',  trigger:()=> S.posture==='friendly' &&
+               (has('wl-foundations')||has('wl-advanced')) && !has('wl-enterprise') &&
+               // Q17 handles the combined case when both families need upgrading
+               !( (has('ep-foundations')||has('ep-advanced')) && !has('ep-enterprise') ),
+    text:'Does the customer want continuous event capture, threat hunting, threat intelligence feeds, and custom detections on their cloud workloads and VMs?',
+    suggest:'Workloads Enterprise',
+    reason:'Workloads Enterprise adds Enterprise EDR to the workloads stack — the same deep visibility and hunting capabilities available for endpoints, applied to cloud workloads.' },
+
+  { id:'q9',  trigger:()=> S.posture==='adverse' && has('appcontrol') && !has('cbr'),
+    text:'Does the customer want a more robust threat hunting platform with deeper visibility into endpoint activity and attacker behavior?',
+    suggest:'Carbon Black Response (EDR)',
+    reason:'App Control excels at prevention but has limited detection depth — Carbon Black Response adds full EDR with process tree visibility, attack chain reconstruction, and threat hunting.' },
+
+  { id:'q10', trigger:()=> S.posture==='adverse' && has('cbr') && !has('appcontrol'),
+    text:'Does the customer want more robust blocking and prevention to complement their threat hunting capability?',
+    suggest:'App Control',
+    reason:'Carbon Black Response provides excellent detection but relies on behavioral blocking — App Control adds application whitelisting to prevent unauthorized software from executing at all.' },
+
+  { id:'q11', trigger:()=> S.posture==='friendly' && has('cbr'),
+    text:'Is the customer looking to modernize their on-prem EDR to a cloud-delivered solution?',
+    suggest:'Enterprise EDR (Cloud)',
+    reason:'Enterprise EDR delivers the same capabilities cloud-natively with no on-prem infrastructure to manage. Once migrated, all other cloud-friendly upsell opportunities apply.' },
+
+  { id:'q12', trigger:()=> S.posture==='friendly' && (hasAnyEPBundle() || has('appcontrol')) && !hasAnyWLBundle(),
+    text:'Does the customer use VMware vCenter, or need cloud workload lifecycle management, asset inventory, AWS account onboarding, prioritized vulnerabilities, or real-time query?',
+    suggest:'Workloads Foundations',
+    reason:'Workloads Foundations includes the vCenter Plug-in and cloud workload management capabilities that Endpoint bundles do not provide — the right fit for customers managing VMs or cloud workloads.' },
+
+  { id:'q13', trigger:()=> S.posture==='friendly' && has('eedr') && !has('ep-enterprise') && !has('wl-enterprise'),
+    text:'Does the customer want NGAV, Live Query, and Vulnerability Management alongside their Enterprise EDR — bundled at a better price point than purchasing each standalone?',
+    suggest:'Endpoint Enterprise',
+    reason:'Customers with standalone Enterprise EDR are often paying more for less — Endpoint Enterprise bundles NGAV, Live Query, and Vulnerability Management together with EEDR.' },
+
+  { id:'q14', trigger:()=> S.posture==='friendly' && has('eedr') && !has('wl-enterprise') && !has('ep-enterprise'),
+    text:"Are the customer's workloads primarily VM or cloud-based rather than traditional endpoints?",
+    suggest:'Workloads Enterprise',
+    reason:'Workloads Enterprise packages Enterprise EDR with vCenter integration, lifecycle management, and AWS onboarding — a better fit than standalone EEDR for VM-heavy or cloud-native environments.' },
+
+  { id:'q15', trigger:()=> S.posture==='friendly' && has('appcontrol') && !hasAnyBundle() && !has('live-query'),
+    text:'Does the customer need real-time query capabilities for compliance audits, M&A due diligence, or IT operations visibility?',
+    suggest:'Live Query (add-on)',
+    reason:'Live Query enables real-time SQL-like queries across all endpoints — essential for point-in-time compliance evidence, inventory sweeps during M&A, and rapid helpdesk investigation.' },
+
+  { id:'q16', trigger:()=> S.posture==='friendly' && has('appcontrol') && !hasEEDR(),
+    text:'Does the customer want cloud-delivered threat hunting, continuous event capture, and visibility into endpoint activity alongside their App Control deployment?',
+    suggest:'Enterprise EDR',
+    reason:'Enterprise EDR complements App Control\'s prevention-first approach with deep detection capability — continuous event capture, process tree visibility, threat intelligence, and custom detections delivered from the cloud with no additional on-prem infrastructure.' },
+
+  { id:'q17', trigger:()=> S.posture==='friendly' &&
+               (has('ep-foundations')||has('ep-advanced')) && !has('ep-enterprise') &&
+               (has('wl-foundations')||has('wl-advanced')) && !has('wl-enterprise'),
+    text:'Does the customer want greater visibility into activity across both their endpoints and cloud workloads, better threat hunting capabilities, and the ability to write custom detections?',
+    suggests: [
+      { suggest:'Endpoint Enterprise',  reason:'Endpoint Enterprise adds Enterprise EDR for endpoints — continuous event capture, full process tree visibility, threat intelligence feeds, and custom detection rules not available in lower tiers.' },
+      { suggest:'Workloads Enterprise', reason:'Workloads Enterprise adds Enterprise EDR for cloud workloads — the same deep visibility and hunting capabilities applied consistently across the workload environment.' },
+    ] },
+];
+
+// ── Answer a question ─────────────────────────────────────────────────────────
+function answer(id, val) {
+  S.answers[id] = val;
+  document.querySelectorAll(`[data-qid="${id}"]`).forEach(btn => {
+    const isYes = btn.dataset.val === 'yes';
+    btn.classList.toggle('active', val === true ? isYes : !isYes);
+  });
+  renderResults();
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render() {
+  const active = QUESTIONS.filter(q => q.trigger());
+
+  // Prune stale answers
+  Object.keys(S.answers).forEach(id => { if (!active.find(q => q.id===id)) delete S.answers[id]; });
+
+  const list = document.getElementById('question-list');
+  if (!active.length) {
+    list.innerHTML = '<p class="empty-msg">No clarifying questions for the current selection.</p>';
+    renderResults();
+    return;
+  }
+
+  list.innerHTML = `<div class="question-stack">${active.map(q => {
+    const ans = S.answers[q.id];
+    return `<div class="question-item">
+      <div class="q-text">${q.text}</div>
+      <div class="q-btns">
+        <button class="q-btn yes ${ans===true?'active':''}" data-qid="${q.id}" data-val="yes" onclick="answer('${q.id}',true)">Yes</button>
+        <button class="q-btn no  ${ans===false?'active':''}" data-qid="${q.id}" data-val="no"  onclick="answer('${q.id}',false)">No</button>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+
+  renderResults();
+}
+
+// If suggestion A is in the active set, these suggestions become redundant
+const SUPERSEDES = {
+  // Endpoint bundles include Live Query from Advanced tier up
+  'Endpoint Enterprise':                      ['Endpoint Advanced or Endpoint Enterprise', 'Live Query (add-on) or upgrade to Endpoint Advanced', 'Live Query (add-on)'],
+  'Endpoint Advanced or Endpoint Enterprise': ['Live Query (add-on) or upgrade to Endpoint Advanced', 'Live Query (add-on)'],
+  // Workloads bundles include Live Query from Foundations up
+  'Workloads Enterprise':                     ['Workloads Advanced', 'Workloads Foundations', 'Live Query (add-on)', 'Live Query (add-on) or upgrade to Endpoint Advanced'],
+  'Workloads Advanced':                       ['Workloads Foundations', 'Live Query (add-on)'],
+  'Workloads Foundations':                    ['Live Query (add-on)'],
+};
+
+// When these suggestions appear together, replace them with a single higher-tier recommendation
+const SKUS = {
+  'Endpoint Foundations':                              'CB-EPFDN-DC-US',
+  'Endpoint Advanced':                                 'CB-EPADV-DC-US',
+  'Endpoint Advanced or Endpoint Enterprise':          'CB-EPADV-DC-US / CB-EPENT-DC-US',
+  'Endpoint Enterprise':                               'CB-EPENT-DC-US',
+  'Enterprise EDR':                                    'CB-EEDR-DC-US',
+  'Enterprise EDR (Cloud)':                            'CB-EEDR-DC-US',
+  'Endpoint NDR (eNDR/XDR)':                           'CB-ENDR-DC-US',
+  'Live Query (add-on)':                               'CB-LQ-DC-US',
+  'Live Query (add-on) or upgrade to Endpoint Advanced': 'CB-LQ-DC-US / CB-EPADV-DC-US',
+  'Workloads Foundations':                             'CB-WLFND-DC-US',
+  'Workloads Advanced':                                'CB-WLADV-DC-US',
+  'Workloads Enterprise':                              'CB-WLENT-DC-US',
+};
+
+const COMBINES_TO = [
+  {
+    requires: ['Workloads Foundations', 'Enterprise EDR'],
+    result:   'Workloads Enterprise',
+    reason:   'Workloads Enterprise bundles Enterprise EDR with vCenter integration, lifecycle management, asset inventory, and AWS onboarding — a single solution covering both requirements.'
+  },
+];
+
+function renderResults() {
+  const active = QUESTIONS.filter(q => q.trigger());
+  const hits   = active.filter(q => S.answers[q.id] === true);
+  const el     = document.getElementById('results-list');
+
+  if (!hits.length) {
+    el.innerHTML = '<p class="empty-msg">No upsell opportunities identified yet — answer Yes to a question above to see recommendations.</p>';
+    return;
+  }
+
+  // Flatten multi-suggest questions into individual {suggest, reason} items
+  const flat = [];
+  for (const q of hits) {
+    if (q.suggests) q.suggests.forEach(s => flat.push(s));
+    else flat.push({ suggest: q.suggest, reason: q.reason });
+  }
+
+  // De-dupe by suggestion string
+  const seen = new Set();
+  const unique = flat.filter(s => { if (seen.has(s.suggest)) return false; seen.add(s.suggest); return true; });
+
+  // Remove suggestions made redundant by a higher-tier suggestion in the same result set
+  const activeSet = new Set(unique.map(q => q.suggest));
+  const redundant = new Set();
+  for (const [superior, superseded] of Object.entries(SUPERSEDES)) {
+    if (activeSet.has(superior)) superseded.forEach(s => redundant.add(s));
+  }
+  let final = unique.filter(q => !redundant.has(q.suggest));
+
+  // Combine pairs of suggestions into a single higher-tier recommendation
+  for (const combo of COMBINES_TO) {
+    const finalSet = new Set(final.map(q => q.suggest));
+    if (combo.requires.every(s => finalSet.has(s))) {
+      final = final.filter(q => !combo.requires.includes(q.suggest));
+      final.push({ suggest: combo.result, reason: combo.reason });
+    }
+  }
+
+  // Tier-match: if Workloads Foundations is suggested and the customer already has an Endpoint bundle,
+  // upgrade to the equivalent Workloads tier so capability is consistent across endpoint and workload coverage
+  const WL_TIER_UPGRADES = [
+    { ep: 'ep-enterprise',
+      wl: 'Workloads Enterprise',
+      reason: 'Workloads Enterprise matches the customer\'s Endpoint Enterprise deployment — Enterprise EDR and full threat hunting capability for cloud workloads, consistent with the protection depth they already have on endpoints.' },
+    { ep: 'ep-advanced',
+      wl: 'Workloads Advanced',
+      reason: 'Workloads Advanced matches the customer\'s Endpoint Advanced deployment — NGAV for cloud workloads at the same protection level as their endpoint coverage.' },
+    { ep: 'ep-foundations',
+      wl: 'Workloads Advanced',
+      reason: 'Workloads Advanced is the minimum recommended tier for customers with Endpoint Foundations — it adds NGAV to the Workloads stack, giving similar prevention capability for cloud workloads as they already have on endpoints.' },
+  ];
+  const wlFoundIdx = final.findIndex(q => q.suggest === 'Workloads Foundations');
+  if (wlFoundIdx !== -1) {
+    for (const { ep, wl, reason } of WL_TIER_UPGRADES) {
+      if (has(ep)) { final[wlFoundIdx] = { suggest: wl, reason }; break; }
+    }
+  }
+
+  el.innerHTML = `<div class="result-stack">${final.map(q =>
+    `<div class="result-item">
+      <div class="r-product">&#8594; ${q.suggest}${SKUS[q.suggest] ? `<span class="r-sku">${SKUS[q.suggest]}</span>` : ''}</div>
+      <div class="r-reason">${q.reason}</div>
+    </div>`
+  ).join('')}</div>`;
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+function resetAll() {
+  S.posture = null; S.products.clear(); S.answers = {};
+  document.getElementById('btn-friendly').className = 'posture-btn';
+  document.getElementById('btn-adverse').className  = 'posture-btn';
+  document.querySelectorAll('.product-item').forEach(el => el.classList.remove('selected'));
+  document.getElementById('warn-overlap').classList.remove('visible');
+  ['card-products','card-questions','card-results'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+}
+</script>
+</body>
+</html>
